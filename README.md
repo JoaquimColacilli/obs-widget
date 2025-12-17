@@ -1,4 +1,4 @@
-# Camululis Tracker 🐱✨
+Yunara Tracker 🐱✨
 
 Fullstack tracker for the "Deaths = Abs" challenge. Built with Angular 17+ and Netlify Functions.
 
