@@ -26,6 +26,8 @@ export class TrackerService {
         stale: true
     };
 
+    private static accountStats: { [key: string]: { deaths: number, abs: number } } = {};
+
     constructor(private http: HttpClient) { }
 
     getSnapshot(account: string = 'account1'): Observable<Snapshot> {
@@ -44,6 +46,27 @@ export class TrackerService {
                     return of(this.defaultSnapshot);
                 })
             )),
+            map(snapshot => {
+                // Update client-side store
+                if (snapshot.accountDeaths !== undefined) {
+                    TrackerService.accountStats[account] = { deaths: snapshot.accountDeaths, abs: snapshot.accountAbs };
+                }
+
+                // Calculate total from known accounts in this session
+                let clientTotalDeaths = 0;
+                let clientTotalAbs = 0;
+                Object.values(TrackerService.accountStats).forEach(stats => {
+                    clientTotalDeaths += stats.deaths;
+                    clientTotalAbs += stats.abs;
+                });
+
+                // Use the higher total to ensure consistency (fixes cold start race conditions)
+                return {
+                    ...snapshot,
+                    totalDeaths: Math.max(snapshot.totalDeaths, clientTotalDeaths),
+                    totalAbs: Math.max(snapshot.totalAbs, clientTotalAbs)
+                };
+            }),
             shareReplay(1)
         );
 
