@@ -1,4 +1,11 @@
 export interface Snapshot {
+    // Per-account stats
+    accountDeaths: number;
+    accountAbs: number;
+    // Combined totals (all 3 accounts)
+    totalDeaths: number;
+    totalAbs: number;
+    // Legacy fields (kept for backwards compatibility)
     deathsTotal: number;
     absTotal: number;
     dayNumber: number;

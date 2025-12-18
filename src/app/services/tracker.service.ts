@@ -9,9 +9,14 @@ import { Snapshot } from '../models/snapshot.model';
 })
 export class TrackerService {
     private apiUrl = '/api/snapshot';
+    private snapshotCache: Map<string, Observable<Snapshot>> = new Map();
 
     // Default snapshot for initial state or error
     private defaultSnapshot: Snapshot = {
+        accountDeaths: 0,
+        accountAbs: 0,
+        totalDeaths: 0,
+        totalAbs: 0,
         deathsTotal: 0,
         absTotal: 0,
         dayNumber: 1,
@@ -23,17 +28,27 @@ export class TrackerService {
 
     constructor(private http: HttpClient) { }
 
-    getSnapshot(): Observable<Snapshot> {
-        return interval(30000).pipe(
+    getSnapshot(account: string = 'account1'): Observable<Snapshot> {
+        // Return cached observable if exists for this account
+        if (this.snapshotCache.has(account)) {
+            return this.snapshotCache.get(account)!;
+        }
+
+        const url = `${this.apiUrl}?account=${account}`;
+        const snapshot$ = interval(30000).pipe(
             startWith(0),
-            switchMap(() => this.http.get<Snapshot>(this.apiUrl).pipe(
-                retry(2), // Retry failed requests twice
+            switchMap(() => this.http.get<Snapshot>(url).pipe(
+                retry(2),
                 catchError(err => {
-                    console.error('Error fetching snapshot', err);
+                    console.error(`Error fetching snapshot for ${account}`, err);
                     return of(this.defaultSnapshot);
                 })
             )),
             shareReplay(1)
         );
+
+        this.snapshotCache.set(account, snapshot$);
+        return snapshot$;
     }
 }
+

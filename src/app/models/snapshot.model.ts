@@ -13,6 +13,13 @@ export interface Match {
 }
 
 export interface Snapshot {
+    // Per-account stats
+    accountDeaths: number;
+    accountAbs: number;
+    // Combined totals (all accounts)
+    totalDeaths: number;
+    totalAbs: number;
+    // Legacy fields
     deathsTotal: number;
     absTotal: number;
     dayNumber: number;
@@ -21,3 +28,4 @@ export interface Snapshot {
     generatedAt: number;
     stale?: boolean;
 }
+

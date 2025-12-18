@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy } from 'lucide-angular';
 import { TrackerService } from '../../services/tracker.service';
@@ -6,13 +6,13 @@ import { Snapshot } from '../../models/snapshot.model';
 import { Observable } from 'rxjs';
 
 @Component({
-  selector: 'app-overlay-style-3',
+  selector: 'app-overlay-waos-3',
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   template: `
 <div class="overlay-wrapper" *ngIf="snapshot$ | async as data">
   <div class="overlay-container">
-    <img src="/backgrounds/bg-yunara.png" class="cosmic-bg" alt="">
+    <img src="/backgrounds/bg-waos.png" class="cosmic-bg" alt="">
     <div class="particle p1"></div><div class="particle p2"></div><div class="particle p3"></div><div class="particle p4"></div><div class="particle p5"></div>
     <div class="sparkle s1"></div><div class="sparkle s2"></div><div class="sparkle s3"></div><div class="sparkle s4"></div>
     <div class="animate-float">
@@ -24,7 +24,7 @@ import { Observable } from 'rxjs';
                 <div class="header-line left"></div>
                 <div class="header-text-container">
                   <span class="challenge-text">RETO YUNARA ABS</span>
-                  <span class="nick-text">{{ brandName }}</span>
+                  <span class="nick-text">WAOS #kmu</span>
                 </div>
                 <div class="header-line right"></div>
               </div>
@@ -77,7 +77,7 @@ import { Observable } from 'rxjs';
       -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
       pointer-events: none;
     }
-    .particle { position: absolute; width: 3px; height: 3px; background: #f472b6; border-radius: 50%; opacity: 0.2; pointer-events: none; z-index: 2; }
+    .particle { position: absolute; width: 3px; height: 3px; background: #5eead4; border-radius: 50%; opacity: 0.2; pointer-events: none; z-index: 2; }
     .p1 { top: 15%; left: 10%; animation: floatParticle 8s ease-in-out infinite; }
     .p2 { top: 60%; left: 85%; animation: floatParticle 7s ease-in-out infinite 1s; }
     .p3 { top: 30%; left: 50%; animation: floatParticle 9s ease-in-out infinite 2s; }
@@ -85,7 +85,7 @@ import { Observable } from 'rxjs';
     .p5 { top: 45%; left: 70%; animation: floatParticle 10s ease-in-out infinite 4s; }
     @keyframes floatParticle { 0%, 100% { transform: translateY(0); opacity: 0.2; } 50% { transform: translateY(-12px); opacity: 0.35; } }
     .sparkle { position: absolute; width: 8px; height: 8px; opacity: 0; pointer-events: none; z-index: 3; }
-    .sparkle::before, .sparkle::after { content: ''; position: absolute; background: #f472b6; }
+    .sparkle::before, .sparkle::after { content: ''; position: absolute; background: #5eead4; }
     .sparkle::before { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
     .sparkle::after { width: 2px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
     .s1 { top: 2px; left: 2px; animation: sparkle 11s ease-in-out infinite; }
@@ -96,46 +96,44 @@ import { Observable } from 'rxjs';
     .animate-float { position: relative; z-index: 1; animation: float 4s ease-in-out infinite; }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
     .breathing-border { animation: breathe 4s ease-in-out infinite; }
-    @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.15); } 50% { box-shadow: 0 0 8px 1px rgba(236, 72, 153, 0.3); } }
+    @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.15); } 50% { box-shadow: 0 0 8px 1px rgba(20, 184, 166, 0.3); } }
     .outer-container { position: relative; width: fit-content; }
-    .glow-ring { position: absolute; inset: -4px; background: linear-gradient(to right, rgba(236, 72, 153, 0.3), rgba(168, 85, 247, 0.3), rgba(236, 72, 153, 0.3)); border-radius: 1.5rem; filter: blur(12px); animation: glowPulse 4s ease-in-out infinite; }
+    .glow-ring { position: absolute; inset: -4px; background: linear-gradient(to right, rgba(20, 184, 166, 0.3), rgba(94, 234, 212, 0.3), rgba(20, 184, 166, 0.3)); border-radius: 1.5rem; filter: blur(12px); animation: glowPulse 4s ease-in-out infinite; }
     @keyframes glowPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
-    .main-container { position: relative; background-color: rgba(9, 9, 11, 0.3); backdrop-filter: blur(12px); border-radius: 1.5rem; border: 1px solid rgba(236, 72, 153, 0.25); overflow: hidden; min-width: 340px; }
-    .header { position: relative; padding: 1.125rem 1.5rem; background: linear-gradient(to right, rgba(236, 72, 153, 0.08), rgba(168, 85, 247, 0.08), rgba(236, 72, 153, 0.08)); }
+    .main-container { position: relative; background-color: rgba(9, 9, 11, 0.3); backdrop-filter: blur(12px); border-radius: 1.5rem; border: 1px solid rgba(20, 184, 166, 0.25); overflow: hidden; min-width: 340px; }
+    .header { position: relative; padding: 1.125rem 1.5rem; background: linear-gradient(to right, rgba(20, 184, 166, 0.08), rgba(94, 234, 212, 0.08), rgba(20, 184, 166, 0.08)); }
     .header-content { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
     .header-line { height: 1px; flex: 1; }
-    .header-line.left { background: linear-gradient(to right, transparent, rgba(236, 72, 153, 0.5)); }
-    .header-line.right { background: linear-gradient(to left, transparent, rgba(236, 72, 153, 0.5)); }
+    .header-line.left { background: linear-gradient(to right, transparent, rgba(20, 184, 166, 0.5)); }
+    .header-line.right { background: linear-gradient(to left, transparent, rgba(20, 184, 166, 0.5)); }
     .header-text-container { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
-    .challenge-text { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.2em; color: #f9a8d4; text-transform: uppercase; white-space: nowrap; }
+    .challenge-text { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.2em; color: #99f6e4; text-transform: uppercase; white-space: nowrap; }
     .nick-text { font-size: 0.875rem; font-weight: 800; letter-spacing: 0.1em; color: white; text-transform: uppercase; white-space: nowrap; }
-    .stats-grid-wrapper { padding: 1rem 1.5rem 1.5rem; }
+    .stats-grid-wrapper { padding: 1rem 1.25rem 1.5rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .glass-card { position: relative; padding: 0.875rem 1rem; border-radius: 0.875rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); }
-    .glass-card:hover { border-color: rgba(236, 72, 153, 0.3); }
-    .glass-card.primary { background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(168, 85, 247, 0.18) 100%); border: 1.5px solid rgba(236, 72, 153, 0.5); box-shadow: 0 4px 20px rgba(236, 72, 153, 0.15); }
+    .glass-card:hover { border-color: rgba(20, 184, 166, 0.3); }
+    .glass-card.primary { background: linear-gradient(135deg, rgba(20, 184, 166, 0.25) 0%, rgba(94, 234, 212, 0.18) 100%); border: 1.5px solid rgba(20, 184, 166, 0.5); box-shadow: 0 4px 20px rgba(20, 184, 166, 0.15); }
     .card-icon { width: 1.125rem; height: 1.125rem; color: #71717a; margin-bottom: 0.5rem; display: block; }
-    .primary-icon { color: #f472b6; filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.6)); }
+    .primary-icon { color: #5eead4; filter: drop-shadow(0 0 8px rgba(20, 184, 166, 0.6)); }
     .card-value { font-size: 1.875rem; font-weight: 700; line-height: 1; margin-bottom: 0.25rem; color: white; }
     .card-value-sm { font-size: 1.375rem; }
-    .primary-value { color: #fce7f3; text-shadow: 0 0 20px rgba(236, 72, 153, 0.5); }
+    .primary-value { color: #ccfbf1; text-shadow: 0 0 20px rgba(20, 184, 166, 0.5); }
     .card-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; font-weight: 500; }
     .card-total { font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-    .corner-accent { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-top: 1px solid rgba(244, 114, 182, 0.6); border-right: 1px solid rgba(244, 114, 182, 0.6); border-top-right-radius: 3px; }
-    .bottom-accent { height: 4px; background: linear-gradient(to right, transparent, rgba(236, 72, 153, 0.5), transparent); }
-    .corner-svg { position: absolute; width: 1rem; height: 1rem; color: rgba(236, 72, 153, 0.6); animation: cornerBreath 4s ease-in-out infinite; }
-    @keyframes cornerBreath { 0%, 100% { color: rgba(236, 72, 153, 0.4); } 50% { color: rgba(236, 72, 153, 0.9); } }
+    .corner-accent { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-top: 1px solid rgba(94, 234, 212, 0.6); border-right: 1px solid rgba(94, 234, 212, 0.6); border-top-right-radius: 3px; }
+    .bottom-accent { height: 4px; background: linear-gradient(to right, transparent, rgba(20, 184, 166, 0.5), transparent); }
+    .corner-svg { position: absolute; width: 1rem; height: 1rem; color: rgba(20, 184, 166, 0.6); animation: cornerBreath 4s ease-in-out infinite; }
+    @keyframes cornerBreath { 0%, 100% { color: rgba(20, 184, 166, 0.4); } 50% { color: rgba(20, 184, 166, 0.9); } }
     .corner-svg.top-left { top: -8px; left: -8px; }
     .corner-svg.top-right { top: -8px; right: -8px; }
     .corner-svg.bottom-left { bottom: -8px; left: -8px; }
     .corner-svg.bottom-right { bottom: -8px; right: -8px; }
   `]
 })
-export class OverlayStyle3Component implements OnInit {
-  @Input() account: string = 'account1';
-  @Input() brandName: string = 'YUNARA LITERAL #abs';
+export class OverlayWaos3Component implements OnInit {
   snapshot$!: Observable<Snapshot>;
   Skull = Skull; Dumbbell = Dumbbell; Calendar = Calendar; Trophy = Trophy;
   constructor(private trackerService: TrackerService) { }
-  ngOnInit() { this.snapshot$ = this.trackerService.getSnapshot(this.account); }
+  ngOnInit() { this.snapshot$ = this.trackerService.getSnapshot('account3'); }
 }

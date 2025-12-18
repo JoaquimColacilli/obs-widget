@@ -32,7 +32,8 @@ export class BlobsService {
         }
     }
 
-    async getState(): Promise<TrackerState> {
+    async getState(accountKey: string = 'account1'): Promise<TrackerState> {
+        const key = `tracker-state-${accountKey}`;
         const defaultState: TrackerState = {
             matchCache: {},
             processedMatchIds: [], // Legacy
@@ -41,34 +42,37 @@ export class BlobsService {
         };
 
         if (this.useMemory) {
-            return memoryStore.get("tracker-state") || defaultState;
+            return memoryStore.get(key) || defaultState;
         }
 
-        const data = await this.store.get("tracker-state", { type: "json" });
+        const data = await this.store.get(key, { type: "json" });
         return (data as TrackerState) || defaultState;
     }
 
-    async saveState(state: TrackerState): Promise<void> {
+    async saveState(state: TrackerState, accountKey: string = 'account1'): Promise<void> {
+        const key = `tracker-state-${accountKey}`;
         if (this.useMemory) {
-            memoryStore.set("tracker-state", state);
+            memoryStore.set(key, state);
             return;
         }
-        await this.store.setJSON("tracker-state", state);
+        await this.store.setJSON(key, state);
     }
 
-    async getLastSnapshot(): Promise<Snapshot | null> {
+    async getLastSnapshot(accountKey: string = 'account1'): Promise<Snapshot | null> {
+        const key = `last-snapshot-${accountKey}`;
         if (this.useMemory) {
-            return memoryStore.get("last-snapshot") || null;
+            return memoryStore.get(key) || null;
         }
-        const data = await this.store.get("last-snapshot", { type: "json" });
+        const data = await this.store.get(key, { type: "json" });
         return (data as Snapshot) || null;
     }
 
-    async saveSnapshot(snapshot: Snapshot): Promise<void> {
+    async saveSnapshot(snapshot: Snapshot, accountKey: string = 'account1'): Promise<void> {
+        const key = `last-snapshot-${accountKey}`;
         if (this.useMemory) {
-            memoryStore.set("last-snapshot", snapshot);
+            memoryStore.set(key, snapshot);
             return;
         }
-        await this.store.setJSON("last-snapshot", snapshot);
+        await this.store.setJSON(key, snapshot);
     }
 }
