@@ -29,8 +29,13 @@ import { OverlayWaos3Component } from '../components/overlay-waos-3/overlay-waos
   ],
   template: `
     <main class="page">
-      <h1 class="page-title">Elegí tu overlay</h1>
-      <p class="page-subtitle">3 cuentas × 3 estilos = 9 overlays para OBS</p>
+      <div class="header-with-logo">
+        <img src="/logo.png" alt="OBSOT Logo" class="header-logo" />
+        <div>
+          <h1 class="page-title">Elegí tu overlay</h1>
+          <p class="page-subtitle">3 cuentas × 3 estilos = 9 overlays para OBS</p>
+        </div>
+      </div>
 
       <div class="columns-container">
         <!-- Column 1: YUNARA LITERAL -->
@@ -177,13 +182,28 @@ import { OverlayWaos3Component } from '../components/overlay-waos-3/overlay-waos
       font-size: 1.5rem;
       font-weight: 700;
       color: white;
-      margin: 0 0 0.5rem 0;
+      margin: 0 0 0.25rem 0;
     }
 
     .page-subtitle {
       font-size: 0.875rem;
       color: #a1a1aa;
-      margin: 0 0 2rem 0;
+      margin: 0;
+    }
+
+    .header-with-logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .header-logo {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      opacity: 0.9;
+      filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.3));
     }
 
     .columns-container {

@@ -94,10 +94,20 @@ export const handler: Handler = async (event, context) => {
             console.log(`⏳ Account ${accountKey} is processing, returning cached snapshot...`);
             const cached = await blobsService.getLastSnapshot(accountKey);
             if (cached) {
+                // Always recalculate totals from all accounts to ensure consistency
+                let totalDeaths = cached.accountDeaths;
+                for (const otherAccountKey of Object.keys(ACCOUNTS)) {
+                    if (otherAccountKey !== accountKey) {
+                        const otherDeaths = await getAccountDeaths(otherAccountKey);
+                        totalDeaths += otherDeaths;
+                    }
+                }
+                const totalAbs = totalDeaths * 5;
+
                 return {
                     statusCode: 200,
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ...cached, stale: true })
+                    body: JSON.stringify({ ...cached, stale: true, totalDeaths, totalAbs })
                 };
             }
         }
@@ -106,10 +116,25 @@ export const handler: Handler = async (event, context) => {
         const lastSnapshot = await blobsService.getLastSnapshot(accountKey);
         if (lastSnapshot && (now - lastSnapshot.generatedAt) < 30000) {
             console.log(`📦 Returning cached snapshot for ${accountKey} (${Math.round((now - lastSnapshot.generatedAt) / 1000)}s old)`);
+
+            // Always recalculate totals from all accounts to ensure consistency
+            let totalDeaths = lastSnapshot.accountDeaths;
+            for (const otherAccountKey of Object.keys(ACCOUNTS)) {
+                if (otherAccountKey !== accountKey) {
+                    const otherDeaths = await getAccountDeaths(otherAccountKey);
+                    totalDeaths += otherDeaths;
+                }
+            }
+            const totalAbs = totalDeaths * 5;
+
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(lastSnapshot)
+                body: JSON.stringify({
+                    ...lastSnapshot,
+                    totalDeaths,
+                    totalAbs
+                })
             };
         }
 
@@ -262,10 +287,22 @@ export const handler: Handler = async (event, context) => {
 
         const fallback = await blobsService.getLastSnapshot(accountKey);
         if (fallback) {
+            // Always recalculate totals from all accounts even in error fallback
+            let totalDeaths = fallback.accountDeaths;
+            for (const otherAccountKey of Object.keys(ACCOUNTS)) {
+                if (otherAccountKey !== accountKey) {
+                    try {
+                        const otherDeaths = await getAccountDeaths(otherAccountKey);
+                        totalDeaths += otherDeaths;
+                    } catch { /* ignore errors in fallback */ }
+                }
+            }
+            const totalAbs = totalDeaths * 5;
+
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...fallback, stale: true })
+                body: JSON.stringify({ ...fallback, stale: true, totalDeaths, totalAbs })
             };
         }
 
