@@ -34,12 +34,12 @@ import { Observable } from 'rxjs';
                 <div class="glass-card">
                   <lucide-icon [img]="Skull" class="card-icon"></lucide-icon>
                   <div class="card-value">{{ data.accountDeaths | number }}</div>
-                  <div class="card-total">Total: {{ data.totalDeaths | number }}</div>
+                  <div class="card-totals">Total: {{ data.totalDeaths | number }} · <span class="card-today">Hoy: {{ data.todayDeaths | number }}</span></div>
                 </div>
                 <div class="glass-card primary">
                   <lucide-icon [img]="Dumbbell" class="card-icon primary-icon"></lucide-icon>
                   <div class="card-value primary-value">{{ data.accountAbs | number }}</div>
-                  <div class="card-total">Total: {{ data.totalAbs | number }}</div>
+                  <div class="card-totals">Total: {{ data.totalAbs | number }} · <span class="card-today">Hoy: {{ data.todayAbs | number }}</span></div>
                   <div class="corner-accent"></div>
                 </div>
                 <div class="glass-card">
@@ -120,7 +120,8 @@ import { Observable } from 'rxjs';
     .card-value-sm { font-size: 1.375rem; }
     .primary-value { color: #fce7f3; text-shadow: 0 0 20px rgba(236, 72, 153, 0.5); }
     .card-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; font-weight: 500; }
-    .card-total { font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .card-totals { display: flex; gap: 0.35rem; font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .card-today { color: #f0abfc; font-weight: 600; }
     .corner-accent { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-top: 1px solid rgba(244, 114, 182, 0.6); border-right: 1px solid rgba(244, 114, 182, 0.6); border-top-right-radius: 3px; }
     .bottom-accent { height: 4px; background: linear-gradient(to right, transparent, rgba(236, 72, 153, 0.5), transparent); }
     .corner-svg { position: absolute; width: 1rem; height: 1rem; color: rgba(236, 72, 153, 0.6); animation: cornerBreath 4s ease-in-out infinite; }

@@ -22,6 +22,8 @@ export class TrackerService {
     private defaultSnapshot: Snapshot = {
         accountDeaths: 0,
         accountAbs: 0,
+        todayDeaths: 0,
+        todayAbs: 0,
         totalDeaths: 0,
         totalAbs: 0,
         deathsTotal: 0,

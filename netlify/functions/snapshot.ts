@@ -72,6 +72,8 @@ export const handler: Handler = async (event, context) => {
             await blobsService.saveSnapshot({
                 accountDeaths: 0,
                 accountAbs: 0,
+                todayDeaths: 0,
+                todayAbs: 0,
                 totalDeaths: 0,
                 totalAbs: 0,
                 deathsTotal: 0,
@@ -205,8 +207,14 @@ export const handler: Handler = async (event, context) => {
             await blobsService.saveState(state, accountKey);
         }
 
+        // Calculate start of today (midnight in local timezone)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayStartEpoch = todayStart.getTime();
+
         // Calculate account deaths
         let accountDeaths = 0;
+        let todayDeaths = 0;
         let validMatchesCount = 0;
         const processedMatches: any[] = [];
 
@@ -218,6 +226,11 @@ export const handler: Handler = async (event, context) => {
 
             validMatchesCount++;
             accountDeaths += match.deaths;
+
+            // Check if match ended today
+            if (match.gameEndTimestamp >= todayStartEpoch) {
+                todayDeaths += match.deaths;
+            }
 
             processedMatches.push({
                 matchId: match.matchId,
@@ -242,6 +255,7 @@ export const handler: Handler = async (event, context) => {
 
         const accountAbs = accountDeaths * 5;
         const totalAbs = totalDeaths * 5;
+        const todayAbs = todayDeaths * 5;
 
         const stillMissing = matchIds.filter(id => !matchCache[id]).length;
         const lastMatches = processedMatches
@@ -253,6 +267,8 @@ export const handler: Handler = async (event, context) => {
         const snapshot: Snapshot = {
             accountDeaths,
             accountAbs,
+            todayDeaths,
+            todayAbs,
             totalDeaths,
             totalAbs,
             deathsTotal: accountDeaths, // Legacy

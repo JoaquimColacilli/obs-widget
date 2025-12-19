@@ -32,7 +32,10 @@ import { OverlayWaos3Component } from '../components/overlay-waos-3/overlay-waos
       <div class="header-with-logo">
         <img src="/logo.png" alt="OBSOT Logo" class="header-logo" />
         <div>
-          <h1 class="page-title">Elegí tu overlay</h1>
+          <div class="title-row">
+            <h1 class="page-title">Elegí tu overlay</h1>
+            <span class="credit-badge">by <span class="credit-name">razhelok</span></span>
+          </div>
           <p class="page-subtitle">3 cuentas × 3 estilos = 9 overlays para OBS</p>
         </div>
       </div>
@@ -182,7 +185,32 @@ import { OverlayWaos3Component } from '../components/overlay-waos-3/overlay-waos
       font-size: 1.5rem;
       font-weight: 700;
       color: white;
-      margin: 0 0 0.25rem 0;
+      margin: 0;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .credit-badge {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #71717a;
+      padding: 0.25rem 0.6rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+    }
+
+    .credit-name {
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #f472b6, #5eead4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .page-subtitle {

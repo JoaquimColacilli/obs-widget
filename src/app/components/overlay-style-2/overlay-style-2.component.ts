@@ -31,7 +31,7 @@ import { Observable } from 'rxjs';
             </div>
             <div class="stat-right">
               <span class="stat-value">{{ data.accountDeaths | number }}</span>
-              <span class="stat-total">Total: {{ data.totalDeaths | number }}</span>
+              <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
             </div>
           </div>
           <div class="stat-row featured">
@@ -41,7 +41,7 @@ import { Observable } from 'rxjs';
             </div>
             <div class="stat-right">
               <span class="stat-value featured-value">{{ data.accountAbs | number }}</span>
-              <span class="stat-total">Total: {{ data.totalAbs | number }}</span>
+              <span class="stat-totals">Total: {{ data.totalAbs | number }} · <span class="stat-today">Hoy: {{ data.todayAbs | number }}</span></span>
             </div>
           </div>
           <div class="stat-row">
@@ -111,7 +111,8 @@ import { Observable } from 'rxjs';
     .stat-label { font-size: 10px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em; }
     .stat-value { font-size: 1.125rem; font-weight: 700; color: white; }
     .stat-value-sm { font-size: 0.875rem; }
-    .stat-total { font-size: 0.55rem; color: #e4e4e7; font-weight: 500; margin-top: 1px; letter-spacing: 0.05em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .stat-totals { display: flex; gap: 0.35rem; font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; margin-top: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); white-space: nowrap; }
+    .stat-today { color: #f0abfc; font-weight: 600; }
     .featured-value { color: #f9a8d4; text-shadow: 0 0 15px rgba(236, 72, 153, 0.5); }
   `]
 })

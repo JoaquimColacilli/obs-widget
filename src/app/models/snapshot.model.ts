@@ -16,6 +16,9 @@ export interface Snapshot {
     // Per-account stats
     accountDeaths: number;
     accountAbs: number;
+    // Today's stats (current day only)
+    todayDeaths: number;
+    todayAbs: number;
     // Combined totals (all accounts)
     totalDeaths: number;
     totalAbs: number;

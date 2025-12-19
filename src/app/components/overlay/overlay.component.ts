@@ -28,14 +28,14 @@ import { Observable } from 'rxjs';
                 <lucide-icon [img]="Skull" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content">
                   <span class="stat-value text-shadow">{{ data.accountDeaths | number }}</span>
-                  <span class="stat-total">Total: {{ data.totalDeaths | number }}</span>
+                  <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
                 </div>
               </div>
               <div class="stat-item highlighted">
                 <lucide-icon [img]="Dumbbell" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content">
                   <span class="stat-value text-shadow">{{ data.accountAbs | number }}</span>
-                  <span class="stat-total">Total: {{ data.totalAbs | number }}</span>
+                  <span class="stat-totals">Total: {{ data.totalAbs | number }} · <span class="stat-today">Hoy: {{ data.todayAbs | number }}</span></span>
                 </div>
               </div>
               <div class="stat-item">
@@ -114,7 +114,8 @@ import { Observable } from 'rxjs';
     .stat-value-sm { font-size: 0.875rem; }
     .text-shadow { text-shadow: 0 0 10px rgba(236, 72, 153, 0.4); }
     .stat-label { font-size: 9px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-total { font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .stat-totals { display: flex; gap: 0.35rem; font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .stat-today { color: #f0abfc; font-weight: 600; }
     .corner { position: absolute; width: 10px; height: 10px; border-color: rgba(236, 72, 153, 0.7); border-style: solid; animation: cornerBreath 4s ease-in-out infinite; }
     @keyframes cornerBreath { 0%, 100% { border-color: rgba(236, 72, 153, 0.5); } 50% { border-color: rgba(236, 72, 153, 0.9); } }
     .top-left { top: -3px; left: -3px; border-width: 2px 0 0 2px; }
