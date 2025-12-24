@@ -8,6 +8,10 @@ const blobsService = new BlobsService();
 // Queue ID for Ranked Solo/Duo
 const RANKED_SOLO_QUEUE_ID = 420;
 
+// Minimum game duration to count (5 minutes in milliseconds)
+// Games shorter than this are remakes and shouldn't count for streak
+const MIN_GAME_DURATION_MS = 5 * 60 * 1000;
+
 // Account configurations
 const ACCOUNTS: Record<string, { gameName: string; tagLine: string }> = {
     account1: { gameName: 'yunara literal', tagLine: 'abs' },
@@ -25,7 +29,6 @@ async function getAccountDeaths(accountKey: string): Promise<number> {
     if (!accountConfig) return 0;
 
     try {
-        // Read from saved snapshot (persistent) instead of match cache (session-based)
         const snapshot = await blobsService.getLastSnapshot(accountKey);
         if (snapshot && snapshot.accountDeaths !== undefined) {
             return snapshot.accountDeaths;
@@ -96,7 +99,6 @@ export const handler: Handler = async (event, context) => {
             console.log(`⏳ Account ${accountKey} is processing, returning cached snapshot...`);
             const cached = await blobsService.getLastSnapshot(accountKey);
             if (cached) {
-                // Always recalculate totals from all accounts to ensure consistency
                 let totalDeaths = cached.accountDeaths;
                 for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                     if (otherAccountKey !== accountKey) {
@@ -119,7 +121,6 @@ export const handler: Handler = async (event, context) => {
         if (lastSnapshot && (now - lastSnapshot.generatedAt) < 30000) {
             console.log(`📦 Returning cached snapshot for ${accountKey} (${Math.round((now - lastSnapshot.generatedAt) / 1000)}s old)`);
 
-            // Always recalculate totals from all accounts to ensure consistency
             let totalDeaths = lastSnapshot.accountDeaths;
             for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                 if (otherAccountKey !== accountKey) {
@@ -180,16 +181,22 @@ export const handler: Handler = async (event, context) => {
                 const participant = details.info.participants.find(p => p.puuid === account.puuid);
 
                 if (participant) {
+                    // Calculate game duration in milliseconds
+                    const gameDuration = details.info.gameDuration * 1000; // API returns seconds
+                    const isRemake = gameDuration < MIN_GAME_DURATION_MS;
+
                     matchCache[matchId] = {
                         matchId: matchId,
                         queueId: details.info.queueId,
                         championName: participant.championName,
                         deaths: participant.deaths,
                         win: participant.win,
-                        gameEndTimestamp: details.info.gameEndTimestamp
+                        gameEndTimestamp: details.info.gameEndTimestamp,
+                        gameDuration: gameDuration,
+                        isRemake: isRemake
                     };
                     matchesFetched++;
-                    console.log(`📥 Cached ${matchId} (${participant.championName})`);
+                    console.log(`📥 Cached ${matchId} (${participant.championName})${isRemake ? ' [REMAKE]' : ''}`);
                 }
             } catch (e: any) {
                 if (e?.response?.status === 429) {
@@ -225,6 +232,8 @@ export const handler: Handler = async (event, context) => {
             if (match.championName.toLowerCase() !== CHAMPION_FILTER.toLowerCase()) continue;
 
             validMatchesCount++;
+
+            // Count deaths even from remakes (they still died)
             accountDeaths += match.deaths;
 
             // Check if match ended today
@@ -232,16 +241,28 @@ export const handler: Handler = async (event, context) => {
                 todayDeaths += match.deaths;
             }
 
+            // Check if this match is a remake
+            const isRemake = match.isRemake || (match.gameDuration && match.gameDuration < MIN_GAME_DURATION_MS);
+
+            // Include ALL matches in lastMatches - remakes get 'remake' result which breaks streak
+            let result: 'win' | 'loss' | 'remake';
+            if (isRemake) {
+                result = 'remake';
+                console.log(`🔄 Match ${matchId} marked as remake (will break streak)`);
+            } else {
+                result = match.win ? 'win' : 'loss';
+            }
+
             processedMatches.push({
                 matchId: match.matchId,
                 deaths: match.deaths,
-                result: match.win ? 'win' : 'loss',
+                result,
                 champion: match.championName,
                 timestamp: match.gameEndTimestamp
             });
         }
 
-        console.log(`🎯 Account ${accountKey}: ${validMatchesCount} ${CHAMPION_FILTER} games, ${accountDeaths} deaths`);
+        console.log(`🎯 Account ${accountKey}: ${validMatchesCount} ${CHAMPION_FILTER} games, ${accountDeaths} deaths, ${processedMatches.length} valid for streak`);
 
         // Calculate COMBINED total from all 3 accounts
         let totalDeaths = accountDeaths;
@@ -258,9 +279,11 @@ export const handler: Handler = async (event, context) => {
         const todayAbs = todayDeaths * 5;
 
         const stillMissing = matchIds.filter(id => !matchCache[id]).length;
+
+        // Sort by timestamp descending and take last 10 for better streak accuracy
         const lastMatches = processedMatches
             .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 5);
+            .slice(0, 10);
 
         const dayNumber = Math.ceil((now - new Date(START_DATE).getTime()) / (1000 * 60 * 60 * 24));
 
@@ -271,8 +294,8 @@ export const handler: Handler = async (event, context) => {
             todayAbs,
             totalDeaths,
             totalAbs,
-            deathsTotal: accountDeaths, // Legacy
-            absTotal: accountAbs, // Legacy
+            deathsTotal: accountDeaths,
+            absTotal: accountAbs,
             dayNumber: Math.max(1, dayNumber),
             rank: {
                 tier: rankEntry?.tier || "UNRANKED",
@@ -303,7 +326,6 @@ export const handler: Handler = async (event, context) => {
 
         const fallback = await blobsService.getLastSnapshot(accountKey);
         if (fallback) {
-            // Always recalculate totals from all accounts even in error fallback
             let totalDeaths = fallback.accountDeaths;
             for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                 if (otherAccountKey !== accountKey) {

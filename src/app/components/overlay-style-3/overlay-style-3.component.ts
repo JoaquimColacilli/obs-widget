@@ -1,9 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy } from 'lucide-angular';
+import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy, TrendingUp, TrendingDown } from 'lucide-angular';
 import { TrackerService } from '../../services/tracker.service';
+import { OverlayStateService, OverlayDeltas } from '../../services/overlay-state.service';
 import { Snapshot } from '../../models/snapshot.model';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-overlay-style-3',
@@ -33,14 +35,24 @@ import { Observable } from 'rxjs';
               <div class="stats-grid">
                 <div class="glass-card">
                   <lucide-icon [img]="Skull" class="card-icon"></lucide-icon>
+                  <div class="card-label-acc">Total acc</div>
                   <div class="card-value">{{ data.accountDeaths | number }}</div>
                   <div class="card-totals">Total: {{ data.totalDeaths | number }} · <span class="card-today">Hoy: {{ data.todayDeaths | number }}</span></div>
+                  <!-- Streak with icon on right -->
+                  <div class="card-streak" *ngIf="deltas.showStreak">
+                    <span [class.streak-win-text]="deltas.streakType === 'W'" [class.streak-loss-text]="deltas.streakType === 'L'">{{ deltas.streakText }}</span>
+                    <lucide-icon *ngIf="deltas.streakType === 'W'" [img]="TrendingUp" [size]="6" class="streak-icon streak-win"></lucide-icon>
+                    <lucide-icon *ngIf="deltas.streakType === 'L'" [img]="TrendingDown" [size]="6" class="streak-icon streak-loss"></lucide-icon>
+                  </div>
                 </div>
                 <div class="glass-card primary">
                   <lucide-icon [img]="Dumbbell" class="card-icon primary-icon"></lucide-icon>
+                  <div class="card-label-acc">Total acc</div>
                   <div class="card-value primary-value">{{ data.accountAbs | number }}</div>
                   <div class="card-totals">Total: {{ data.totalAbs | number }} · <span class="card-today">Hoy: {{ data.todayAbs | number }}</span></div>
                   <div class="corner-accent"></div>
+                  <!-- ABS Toast -->
+                  <div class="abs-toast" *ngIf="showAbsToast">+{{ absToastAmount }} ABS</div>
                 </div>
                 <div class="glass-card">
                   <lucide-icon [img]="Calendar" class="card-icon"></lucide-icon>
@@ -50,7 +62,14 @@ import { Observable } from 'rxjs';
                 <div class="glass-card">
                   <lucide-icon [img]="Trophy" class="card-icon"></lucide-icon>
                   <div class="card-value card-value-sm">{{ data.rank.tier }} {{ data.rank.division }}</div>
-                  <div class="card-label">{{ data.rank.lp }} LP</div>
+                  <div class="card-label">
+                    {{ data.rank.lp }} LP
+                    <span class="lp-trend" *ngIf="deltas.showLpTrend" [class.up]="deltas.lpDelta > 0" [class.down]="deltas.lpDelta < 0">{{ deltas.lpTrendText }}</span>
+                  </div>
+                  <!-- Rank Change Badge -->
+                  <div class="rank-badge" *ngIf="showRankBadge" [class.up]="deltas.rankChangeDirection === 'up'" [class.down]="deltas.rankChangeDirection === 'down'">
+                    {{ deltas.rankChangeText }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -109,7 +128,7 @@ import { Observable } from 'rxjs';
     .header-text-container { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
     .challenge-text { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.2em; color: #f9a8d4; text-transform: uppercase; white-space: nowrap; }
     .nick-text { font-size: 0.875rem; font-weight: 800; letter-spacing: 0.1em; color: white; text-transform: uppercase; white-space: nowrap; }
-    .stats-grid-wrapper { padding: 1rem 1.5rem 1.5rem; }
+    .stats-grid-wrapper { padding: 1rem 1.25rem 1.5rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .glass-card { position: relative; padding: 0.875rem 1rem; border-radius: 0.875rem; background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); }
     .glass-card:hover { border-color: rgba(236, 72, 153, 0.3); }
@@ -119,10 +138,20 @@ import { Observable } from 'rxjs';
     .card-value { font-size: 1.875rem; font-weight: 700; line-height: 1; margin-bottom: 0.25rem; color: white; }
     .card-value-sm { font-size: 1.375rem; }
     .primary-value { color: #fce7f3; text-shadow: 0 0 20px rgba(236, 72, 153, 0.5); }
-    .card-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; font-weight: 500; }
+    .card-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; font-weight: 500; display: flex; align-items: center; gap: 0.25rem; }
+    .card-label-acc { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.03em; color: #a1a1aa; margin-bottom: 2px; }
     .card-totals { display: flex; gap: 0.35rem; font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
     .card-today { color: #f0abfc; font-weight: 600; }
-    .corner-accent { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-top: 1px solid rgba(244, 114, 182, 0.6); border-right: 1px solid rgba(244, 114, 182, 0.6); border-top-right-radius: 3px; }
+    
+    /* Streak with icon on right */
+    .card-streak { display: flex; align-items: center; gap: 3px; margin-top: 3px; }
+    .streak-icon { width: 8px !important; height: 8px !important; flex-shrink: 0; display: inline-flex !important; align-items: center; vertical-align: middle; }\n    .streak-icon svg { width: 8px !important; height: 8px !important; display: block; }
+    .streak-win { color: #22c55e; }
+    .streak-loss { color: #ef4444; }
+    .streak-win-text { font-size: 0.5rem; font-weight: 600; color: #22c55e; }
+    .streak-loss-text { font-size: 0.5rem; font-weight: 600; color: #ef4444; }
+    
+    .corner-accent { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-top: 1px solid rgba(236, 72, 153, 0.6); border-right: 1px solid rgba(236, 72, 153, 0.6); border-top-right-radius: 3px; }
     .bottom-accent { height: 4px; background: linear-gradient(to right, transparent, rgba(236, 72, 153, 0.5), transparent); }
     .corner-svg { position: absolute; width: 1rem; height: 1rem; color: rgba(236, 72, 153, 0.6); animation: cornerBreath 4s ease-in-out infinite; }
     @keyframes cornerBreath { 0%, 100% { color: rgba(236, 72, 153, 0.4); } 50% { color: rgba(236, 72, 153, 0.9); } }
@@ -130,13 +159,92 @@ import { Observable } from 'rxjs';
     .corner-svg.top-right { top: -8px; right: -8px; }
     .corner-svg.bottom-left { bottom: -8px; left: -8px; }
     .corner-svg.bottom-right { bottom: -8px; right: -8px; }
+
+    /* LP Trend */
+    .lp-trend { font-size: 8px; font-weight: 600; }
+    .lp-trend.up { color: #4ade80; }
+    .lp-trend.down { color: #f87171; }
+
+    /* Rank Badge */
+    .rank-badge {
+      position: absolute; top: 6px; left: 6px;
+      font-size: 7px; font-weight: 700; padding: 2px 4px;
+      border-radius: 3px; animation: rankBadgePulse 0.5s ease-out; white-space: nowrap;
+    }
+    .rank-badge.up { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.5); }
+    .rank-badge.down { background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.5); }
+    @keyframes rankBadgePulse { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    /* ABS Toast */
+    .abs-toast {
+      position: absolute; top: 6px; right: 24px;
+      font-size: 9px; font-weight: 700; color: #f472b6;
+      background: rgba(236, 72, 153, 0.15);
+      border: 1px solid rgba(236, 72, 153, 0.4);
+      padding: 2px 5px; border-radius: 4px;
+      animation: absToastAnim 1s ease-out forwards;
+      white-space: nowrap; z-index: 10; pointer-events: none;
+    }
+    @keyframes absToastAnim {
+      0% { opacity: 0; transform: translateY(8px) scale(0.8); }
+      15% { opacity: 1; transform: translateY(0) scale(1); }
+      85% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-8px) scale(0.9); }
+    }
   `]
 })
-export class OverlayStyle3Component implements OnInit {
+export class OverlayStyle3Component implements OnInit, OnDestroy {
   @Input() account: string = 'account1';
   @Input() brandName: string = 'YUNARA LITERAL #abs';
+
   snapshot$!: Observable<Snapshot>;
   Skull = Skull; Dumbbell = Dumbbell; Calendar = Calendar; Trophy = Trophy;
-  constructor(private trackerService: TrackerService) { }
-  ngOnInit() { this.snapshot$ = this.trackerService.getSnapshot(this.account); }
+  TrendingUp = TrendingUp; TrendingDown = TrendingDown;
+
+  deltas: OverlayDeltas = {
+    deltaDeaths: 0, lpDelta: 0, showLpTrend: false, lpTrendText: '',
+    showRankChange: false, rankChangeText: '', rankChangeDirection: null,
+    shouldShowAbsToast: false, absToastAmount: 0, showStreak: false,
+    streakType: null, streakCount: 0, streakText: ''
+  };
+
+  showAbsToast = false;
+  absToastAmount = 0;
+  showRankBadge = false;
+
+  private toastTimeout?: any;
+  private rankBadgeTimeout?: any;
+
+  constructor(
+    private trackerService: TrackerService,
+    private overlayStateService: OverlayStateService
+  ) { }
+
+  ngOnInit() {
+    const overlayId = `yunara-3-${this.account}`;
+
+    this.snapshot$ = this.trackerService.getSnapshot(this.account).pipe(
+      tap(snapshot => {
+        this.deltas = this.overlayStateService.processSnapshot(overlayId, snapshot);
+
+        if (this.deltas.shouldShowAbsToast) {
+          this.showAbsToast = true;
+          this.absToastAmount = this.deltas.absToastAmount;
+          if (this.toastTimeout) clearTimeout(this.toastTimeout);
+          this.toastTimeout = setTimeout(() => { this.showAbsToast = false; }, 1000);
+        }
+
+        if (this.deltas.showRankChange) {
+          this.showRankBadge = true;
+          if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
+          this.rankBadgeTimeout = setTimeout(() => { this.showRankBadge = false; }, 10000);
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
+  }
 }

@@ -20,7 +20,7 @@ export interface Snapshot {
     lastMatches: Array<{
         matchId: string;
         deaths: number;
-        result: 'win' | 'loss';
+        result: 'win' | 'loss' | 'remake';
         champion: string;
         timestamp: number;
     }>;
@@ -35,6 +35,8 @@ export interface CachedMatch {
     deaths: number;
     win: boolean;
     gameEndTimestamp: number;
+    gameDuration?: number;  // Game duration in milliseconds
+    isRemake?: boolean;     // true if game was shorter than 5 minutes
 }
 
 export interface TrackerState {

@@ -7,7 +7,7 @@ export interface Rank {
 export interface Match {
     matchId: string;
     deaths: number;
-    result: 'win' | 'loss';
+    result: 'win' | 'loss' | 'remake';  // remake breaks streak
     champion: string;
     timestamp: number;
 }

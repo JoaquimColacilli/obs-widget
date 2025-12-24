@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy } from 'lucide-angular';
+import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy, TrendingUp, TrendingDown } from 'lucide-angular';
 import { TrackerService } from '../../services/tracker.service';
+import { OverlayStateService, OverlayDeltas } from '../../services/overlay-state.service';
 import { Snapshot } from '../../models/snapshot.model';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-overlay-lamej0r-1',
@@ -13,17 +15,8 @@ import { Observable } from 'rxjs';
 <div class="overlay-wrapper" *ngIf="snapshot$ | async as data">
   <div class="overlay-container">
     <img src="/backgrounds/bg-lamejor.png" class="cosmic-bg" alt="">
-    <!-- Floating Particles - Almas de Yunara -->
-    <div class="particle p1"></div>
-    <div class="particle p2"></div>
-    <div class="particle p3"></div>
-    <div class="particle p4"></div>
-    <div class="particle p5"></div>
-    <!-- Corner Sparkles -->
-    <div class="sparkle s1"></div>
-    <div class="sparkle s2"></div>
-    <div class="sparkle s3"></div>
-    <div class="sparkle s4"></div>
+    <div class="particle p1"></div><div class="particle p2"></div><div class="particle p3"></div><div class="particle p4"></div><div class="particle p5"></div>
+    <div class="sparkle s1"></div><div class="sparkle s2"></div><div class="sparkle s3"></div><div class="sparkle s4"></div>
     <div class="animate-float">
         <div class="container-hud breathing-border">
           <div class="gradient-line-top"></div>
@@ -36,15 +29,23 @@ import { Observable } from 'rxjs';
               <div class="stat-item">
                 <lucide-icon [img]="Skull" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content">
+                  <span class="stat-label-acc">Total acc</span>
                   <span class="stat-value text-shadow">{{ data.accountDeaths | number }}</span>
                   <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
+                  <div class="stat-streak" *ngIf="deltas.showStreak">
+                    <span [class.streak-win-text]="deltas.streakType === 'W'" [class.streak-loss-text]="deltas.streakType === 'L'">{{ deltas.streakText }}</span>
+                    <lucide-icon *ngIf="deltas.streakType === 'W'" [img]="TrendingUp" [size]="6" class="streak-icon streak-win"></lucide-icon>
+                    <lucide-icon *ngIf="deltas.streakType === 'L'" [img]="TrendingDown" [size]="6" class="streak-icon streak-loss"></lucide-icon>
+                  </div>
                 </div>
               </div>
               <div class="stat-item highlighted">
                 <lucide-icon [img]="Dumbbell" class="stat-icon icon-shadow"></lucide-icon>
-                <div class="stat-content">
+                <div class="stat-content stat-content-relative">
+                  <span class="stat-label-acc">Total acc</span>
                   <span class="stat-value text-shadow">{{ data.accountAbs | number }}</span>
                   <span class="stat-totals">Total: {{ data.totalAbs | number }} · <span class="stat-today">Hoy: {{ data.todayAbs | number }}</span></span>
+                  <div class="abs-toast" *ngIf="showAbsToast">+{{ absToastAmount }} ABS</div>
                 </div>
               </div>
               <div class="stat-item">
@@ -58,7 +59,13 @@ import { Observable } from 'rxjs';
                 <lucide-icon [img]="Trophy" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content">
                   <span class="stat-value stat-value-sm text-shadow">{{ data.rank.tier }} {{ data.rank.division }}</span>
-                  <span class="stat-label">{{ data.rank.lp }} LP</span>
+                  <span class="stat-label">
+                    {{ data.rank.lp }} LP
+                    <span class="lp-trend" *ngIf="deltas.showLpTrend" [class.up]="deltas.lpDelta > 0" [class.down]="deltas.lpDelta < 0">{{ deltas.lpTrendText }}</span>
+                  </span>
+                  <div class="rank-badge" *ngIf="showRankBadge" [class.up]="deltas.rankChangeDirection === 'up'" [class.down]="deltas.rankChangeDirection === 'down'">
+                    {{ deltas.rankChangeText }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -77,8 +84,6 @@ import { Observable } from 'rxjs';
     :host { display: inline-block; }
     .overlay-wrapper { display: inline-block; font-family: 'Inter', system-ui, sans-serif; }
     .overlay-container { position: relative; padding: 0.1rem; }
-    
-    /* Cosmic Background */
     .cosmic-bg {
       position: absolute; inset: 0; width: 100%; height: 100%;
       object-fit: cover; opacity: 0.4; filter: blur(2px);
@@ -87,94 +92,33 @@ import { Observable } from 'rxjs';
       -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
       pointer-events: none;
     }
-    
-    /* Floating Particles - Almas de Yunara */
-    .particle {
-      position: absolute;
-      width: 3px; height: 3px;
-      background: #a78bfa;
-      border-radius: 50%;
-      opacity: 0.2;
-      pointer-events: none;
-      z-index: 2;
-    }
+    .particle { position: absolute; width: 3px; height: 3px; background: #a78bfa; border-radius: 50%; opacity: 0.2; pointer-events: none; z-index: 2; }
     .p1 { top: 15%; left: 10%; animation: floatParticle 8s ease-in-out infinite; }
     .p2 { top: 60%; left: 85%; animation: floatParticle 7s ease-in-out infinite 1s; }
     .p3 { top: 30%; left: 50%; animation: floatParticle 9s ease-in-out infinite 2s; }
     .p4 { top: 75%; left: 25%; animation: floatParticle 6s ease-in-out infinite 3s; }
     .p5 { top: 45%; left: 70%; animation: floatParticle 10s ease-in-out infinite 4s; }
-    
-    @keyframes floatParticle {
-      0%, 100% { transform: translateY(0); opacity: 0.2; }
-      50% { transform: translateY(-12px); opacity: 0.35; }
-    }
-    
-    /* Corner Sparkles */
-    .sparkle {
-      position: absolute;
-      width: 8px; height: 8px;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 3;
-    }
-    .sparkle::before, .sparkle::after {
-      content: '';
-      position: absolute;
-      background: #a78bfa;
-    }
-    .sparkle::before {
-      width: 100%; height: 2px;
-      top: 50%; left: 0;
-      transform: translateY(-50%);
-    }
-    .sparkle::after {
-      width: 2px; height: 100%;
-      left: 50%; top: 0;
-      transform: translateX(-50%);
-    }
+    @keyframes floatParticle { 0%, 100% { transform: translateY(0); opacity: 0.2; } 50% { transform: translateY(-12px); opacity: 0.35; } }
+    .sparkle { position: absolute; width: 8px; height: 8px; opacity: 0; pointer-events: none; z-index: 3; }
+    .sparkle::before, .sparkle::after { content: ''; position: absolute; background: #a78bfa; }
+    .sparkle::before { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
+    .sparkle::after { width: 2px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
     .s1 { top: 2px; left: 2px; animation: sparkle 11s ease-in-out infinite; }
     .s2 { top: 2px; right: 2px; animation: sparkle 13s ease-in-out infinite 3s; }
     .s3 { bottom: 2px; left: 2px; animation: sparkle 10s ease-in-out infinite 6s; }
     .s4 { bottom: 2px; right: 2px; animation: sparkle 12s ease-in-out infinite 9s; }
-    
-    @keyframes sparkle {
-      0%, 95%, 100% { opacity: 0; transform: scale(0.5); }
-      97% { opacity: 0.6; transform: scale(1); }
-    }
-    
-    /* Float animation */
+    @keyframes sparkle { 0%, 95%, 100% { opacity: 0; transform: scale(0.5); } 97% { opacity: 0.6; transform: scale(1); } }
     .animate-float { position: relative; z-index: 1; animation: float 4s ease-in-out infinite; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-3px); }
-    }
-    
-    /* Breathing Border Effect */
-    .breathing-border {
-      animation: breathe 4s ease-in-out infinite;
-    }
-    @keyframes breathe {
-      0%, 100% { box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.15); }
-      50% { box-shadow: 0 0 8px 1px rgba(124, 58, 237, 0.3); }
-    }
-    
-    /* Main Container */
-    .container-hud { 
-      position: relative; 
-      background-color: rgba(9, 9, 11, 0.3); 
-      backdrop-filter: blur(8px); 
-      border-radius: 0.75rem; 
-      overflow: hidden; 
-    }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .breathing-border { animation: breathe 4s ease-in-out infinite; }
+    @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.15); } 50% { box-shadow: 0 0 8px 1px rgba(124, 58, 237, 0.3); } }
+    .container-hud { position: relative; background-color: rgba(9, 9, 11, 0.3); backdrop-filter: blur(8px); border-radius: 0.75rem; overflow: hidden; }
     .gradient-line-top { height: 2px; background: linear-gradient(to right, #7c3aed, #a78bfa, #7c3aed); }
     .gradient-line-bottom { height: 2px; background: linear-gradient(to right, transparent, rgba(124, 58, 237, 0.5), transparent); }
     .content-row { display: flex; align-items: center; gap: 0.25rem; padding: 0.625rem 0.875rem; }
     .brand-mark { display: flex; align-items: center; gap: 0.5rem; padding-right: 1rem; border-right: 1px solid rgba(124, 58, 237, 0.3); }
     .pulse-dot { width: 6px; height: 6px; border-radius: 9999px; background-color: #7c3aed; animation: pulseDot 2s ease-in-out infinite; }
-    @keyframes pulseDot {
-      0%, 100% { opacity: 0.7; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.2); }
-    }
+    @keyframes pulseDot { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
     .brand-text { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #a78bfa; text-transform: uppercase; }
     .stats-container { display: flex; align-items: center; gap: 1.25rem; padding-left: 0.75rem; }
     .stat-item { display: flex; align-items: center; gap: 0.75rem; }
@@ -182,32 +126,108 @@ import { Observable } from 'rxjs';
     .stat-icon { width: 14px; height: 14px; color: #a78bfa; }
     .icon-shadow { filter: drop-shadow(0 0 4px rgba(124, 58, 237, 0.5)); }
     .stat-content { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .stat-content-relative { position: relative; }
     .stat-value { font-size: 1rem; font-weight: 700; color: white; line-height: 1; }
     .stat-value-sm { font-size: 0.875rem; }
     .text-shadow { text-shadow: 0 0 10px rgba(124, 58, 237, 0.4); }
-    .stat-label { font-size: 9px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-totals { display: flex; gap: 0.35rem; font-size: 0.55rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .stat-label { font-size: 9px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem; }
+    .stat-label-acc { font-size: 7px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 1px; }
+    .stat-totals { display: flex; gap: 0.35rem; font-size: 0.5rem; color: #e4e4e7; font-weight: 500; letter-spacing: 0.02em; margin-top: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
     .stat-today { color: #c4b5fd; font-weight: 600; }
     
-    /* Corners with breathing */
-    .corner { 
-      position: absolute; width: 10px; height: 10px; 
-      border-color: rgba(124, 58, 237, 0.7); border-style: solid;
-      animation: cornerBreath 4s ease-in-out infinite;
-    }
-    @keyframes cornerBreath {
-      0%, 100% { border-color: rgba(124, 58, 237, 0.5); }
-      50% { border-color: rgba(124, 58, 237, 0.9); }
-    }
+    .stat-streak { display: flex; align-items: center; gap: 3px; margin-top: 2px; }
+    .streak-icon { width: 8px !important; height: 8px !important; flex-shrink: 0; display: inline-flex !important; align-items: center; vertical-align: middle; }\n    .streak-icon svg { width: 8px !important; height: 8px !important; display: block; }
+    .streak-win { color: #22c55e; }
+    .streak-loss { color: #ef4444; }
+    .streak-win-text { font-size: 0.45rem; font-weight: 600; color: #22c55e; }
+    .streak-loss-text { font-size: 0.45rem; font-weight: 600; color: #ef4444; }
+    
+    .corner { position: absolute; width: 10px; height: 10px; border-color: rgba(124, 58, 237, 0.7); border-style: solid; animation: cornerBreath 4s ease-in-out infinite; }
+    @keyframes cornerBreath { 0%, 100% { border-color: rgba(124, 58, 237, 0.5); } 50% { border-color: rgba(124, 58, 237, 0.9); } }
     .top-left { top: -3px; left: -3px; border-width: 2px 0 0 2px; }
     .top-right { top: -3px; right: -3px; border-width: 2px 2px 0 0; }
     .bottom-left { bottom: -3px; left: -3px; border-width: 0 0 2px 2px; }
     .bottom-right { bottom: -3px; right: -3px; border-width: 0 2px 2px 0; }
+
+    .lp-trend { font-size: 8px; font-weight: 600; }
+    .lp-trend.up { color: #4ade80; }
+    .lp-trend.down { color: #f87171; }
+
+    .rank-badge {
+      position: absolute; top: -8px; right: -8px;
+      font-size: 7px; font-weight: 700; padding: 2px 4px;
+      border-radius: 3px; animation: rankBadgePulse 0.5s ease-out; white-space: nowrap;
+    }
+    .rank-badge.up { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.5); }
+    .rank-badge.down { background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.5); }
+    @keyframes rankBadgePulse { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .abs-toast {
+      position: absolute; top: -20px; right: -10px;
+      font-size: 10px; font-weight: 700; color: #a78bfa;
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      padding: 2px 6px; border-radius: 4px;
+      animation: absToastAnim 1s ease-out forwards;
+      white-space: nowrap; z-index: 10; pointer-events: none;
+    }
+    @keyframes absToastAnim {
+      0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+      15% { opacity: 1; transform: translateY(0) scale(1); }
+      85% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+    }
   `]
 })
-export class OverlayLamej0r1Component implements OnInit {
+export class OverlayLamej0r1Component implements OnInit, OnDestroy {
   snapshot$!: Observable<Snapshot>;
   Skull = Skull; Dumbbell = Dumbbell; Calendar = Calendar; Trophy = Trophy;
-  constructor(private trackerService: TrackerService) { }
-  ngOnInit() { this.snapshot$ = this.trackerService.getSnapshot('account2'); }
+  TrendingUp = TrendingUp; TrendingDown = TrendingDown;
+
+  deltas: OverlayDeltas = {
+    deltaDeaths: 0, lpDelta: 0, showLpTrend: false, lpTrendText: '',
+    showRankChange: false, rankChangeText: '', rankChangeDirection: null,
+    shouldShowAbsToast: false, absToastAmount: 0, showStreak: false,
+    streakType: null, streakCount: 0, streakText: ''
+  };
+
+  showAbsToast = false;
+  absToastAmount = 0;
+  showRankBadge = false;
+
+  private toastTimeout?: any;
+  private rankBadgeTimeout?: any;
+
+  constructor(
+    private trackerService: TrackerService,
+    private overlayStateService: OverlayStateService
+  ) { }
+
+  ngOnInit() {
+    const overlayId = 'lamej0r-1-account2';
+
+    this.snapshot$ = this.trackerService.getSnapshot('account2').pipe(
+      tap(snapshot => {
+        this.deltas = this.overlayStateService.processSnapshot(overlayId, snapshot);
+
+        if (this.deltas.shouldShowAbsToast) {
+          this.showAbsToast = true;
+          this.absToastAmount = this.deltas.absToastAmount;
+          if (this.toastTimeout) clearTimeout(this.toastTimeout);
+          this.toastTimeout = setTimeout(() => { this.showAbsToast = false; }, 1000);
+        }
+
+        if (this.deltas.showRankChange) {
+          this.showRankBadge = true;
+          if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
+          this.rankBadgeTimeout = setTimeout(() => { this.showRankBadge = false; }, 10000);
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
+  }
 }
