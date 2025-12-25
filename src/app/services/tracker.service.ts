@@ -29,7 +29,7 @@ export class TrackerService {
         deathsTotal: 0,
         absTotal: 0,
         dayNumber: 1,
-        rank: { tier: 'UNRANKED', division: '', lp: 0 },
+        rank: { tier: 'UNRANKED', division: '', lp: 0, wins: 0, losses: 0 },
         lastMatches: [],
         generatedAt: Date.now(),
         stale: true

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy, TrendingUp, TrendingDown } from 'lucide-angular';
+import { LucideAngularModule, Skull, Dumbbell, Calendar, Trophy, TrendingUp, TrendingDown, Crown, HeartCrack } from 'lucide-angular';
 import { TrackerService } from '../../services/tracker.service';
 import { OverlayStateService, OverlayDeltas } from '../../services/overlay-state.service';
 import { Snapshot } from '../../models/snapshot.model';
@@ -32,7 +32,23 @@ import { tap } from 'rxjs/operators';
                   <span class="stat-label-acc">Total acc</span>
                   <span class="stat-value text-shadow">{{ data.accountDeaths | number }}</span>
                   <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
-                  <div class="stat-streak" *ngIf="deltas.showStreak">
+                  <!-- Streak/Winrate Carousel (horizontal slide) -->
+                  <div class="streak-carousel" *ngIf="deltas.showStreak && showWinrateCarousel">
+                    <div class="carousel-track">
+                      <div class="carousel-slide">
+                        <span [class.streak-win-text]="deltas.streakType === 'W'" [class.streak-loss-text]="deltas.streakType === 'L'">{{ deltas.streakText }}</span>
+                        <lucide-icon *ngIf="deltas.streakType === 'W'" [img]="TrendingUp" [size]="6" class="streak-icon streak-win"></lucide-icon>
+                        <lucide-icon *ngIf="deltas.streakType === 'L'" [img]="TrendingDown" [size]="6" class="streak-icon streak-loss"></lucide-icon>
+                      </div>
+                      <div class="carousel-slide">
+                        <span class="winrate-text">{{ winrateText }}</span>
+                        <lucide-icon *ngIf="isWinrateHigh" [img]="Crown" [size]="6" class="winrate-icon winrate-high"></lucide-icon>
+                        <lucide-icon *ngIf="!isWinrateHigh" [img]="HeartCrack" [size]="6" class="winrate-icon winrate-low"></lucide-icon>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Fallback: static streak -->
+                  <div class="stat-streak" *ngIf="deltas.showStreak && !showWinrateCarousel">
                     <span [class.streak-win-text]="deltas.streakType === 'W'" [class.streak-loss-text]="deltas.streakType === 'L'">{{ deltas.streakText }}</span>
                     <lucide-icon *ngIf="deltas.streakType === 'W'" [img]="TrendingUp" [size]="6" class="streak-icon streak-win"></lucide-icon>
                     <lucide-icon *ngIf="deltas.streakType === 'L'" [img]="TrendingDown" [size]="6" class="streak-icon streak-loss"></lucide-icon>
@@ -142,6 +158,22 @@ import { tap } from 'rxjs/operators';
     .streak-win-text { font-size: 0.45rem; font-weight: 600; color: #22c55e; }
     .streak-loss-text { font-size: 0.45rem; font-weight: 600; color: #ef4444; }
     
+    /* Streak/Winrate Carousel */
+    .streak-carousel { overflow: hidden; width: 100%; height: 0.65rem; position: relative; margin-top: 2px; }
+    .carousel-track { display: flex; flex-direction: row; width: 200%; animation: streakCarousel 12.6s ease-in-out infinite; }
+    .carousel-slide { display: flex; align-items: center; justify-content: center; gap: 3px; width: 50%; flex-shrink: 0; }
+    .winrate-text { font-size: 0.45rem; font-weight: 600; color: #c4b5fd; }
+    .winrate-icon { width: 6px !important; height: 6px !important; flex-shrink: 0; display: inline-flex !important; align-items: center; }
+    .winrate-icon svg { width: 6px !important; height: 6px !important; display: block; }
+    .winrate-high { color: #fbbf24; }
+    .winrate-low { color: #f87171; }
+    @keyframes streakCarousel {
+      0%, 63.5% { transform: translateX(0); }
+      66% { transform: translateX(-50%); }
+      97.6% { transform: translateX(-50%); }
+      100% { transform: translateX(0); }
+    }
+    
     .corner { position: absolute; width: 10px; height: 10px; border-color: rgba(124, 58, 237, 0.7); border-style: solid; animation: cornerBreath 4s ease-in-out infinite; }
     @keyframes cornerBreath { 0%, 100% { border-color: rgba(124, 58, 237, 0.5); } 50% { border-color: rgba(124, 58, 237, 0.9); } }
     .top-left { top: -3px; left: -3px; border-width: 2px 0 0 2px; }
@@ -183,6 +215,7 @@ export class OverlayLamej0r1Component implements OnInit, OnDestroy {
   snapshot$!: Observable<Snapshot>;
   Skull = Skull; Dumbbell = Dumbbell; Calendar = Calendar; Trophy = Trophy;
   TrendingUp = TrendingUp; TrendingDown = TrendingDown;
+  Crown = Crown; HeartCrack = HeartCrack;
 
   deltas: OverlayDeltas = {
     deltaDeaths: 0, lpDelta: 0, showLpTrend: false, lpTrendText: '',
@@ -194,6 +227,11 @@ export class OverlayLamej0r1Component implements OnInit, OnDestroy {
   showAbsToast = false;
   absToastAmount = 0;
   showRankBadge = false;
+
+  // Winrate carousel
+  winrateText: string = '';
+  showWinrateCarousel: boolean = false;
+  isWinrateHigh: boolean = true;
 
   private toastTimeout?: any;
   private rankBadgeTimeout?: any;
@@ -222,6 +260,12 @@ export class OverlayLamej0r1Component implements OnInit, OnDestroy {
           if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
           this.rankBadgeTimeout = setTimeout(() => { this.showRankBadge = false; }, 10000);
         }
+
+        // Calculate winrate for carousel (using official Riot API data)
+        const winrateResult = this.calculateWinrate(snapshot.rank.wins, snapshot.rank.losses);
+        this.winrateText = winrateResult.text;
+        this.showWinrateCarousel = winrateResult.showCarousel;
+        this.isWinrateHigh = winrateResult.winrateValue >= 50;
       })
     );
   }
@@ -229,5 +273,12 @@ export class OverlayLamej0r1Component implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
     if (this.rankBadgeTimeout) clearTimeout(this.rankBadgeTimeout);
+  }
+
+  private calculateWinrate(wins: number, losses: number): { text: string; showCarousel: boolean; winrateValue: number } {
+    const totalGames = wins + losses;
+    if (totalGames < 3) return { text: '', showCarousel: false, winrateValue: 0 };
+    const wr = Math.round((wins / totalGames) * 100);
+    return { text: `${wr}% WR`, showCarousel: true, winrateValue: wr };
   }
 }

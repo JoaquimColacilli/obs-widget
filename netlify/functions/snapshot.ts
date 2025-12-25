@@ -82,7 +82,7 @@ export const handler: Handler = async (event, context) => {
                 deathsTotal: 0,
                 absTotal: 0,
                 dayNumber: 1,
-                rank: { tier: 'UNRANKED', division: '', lp: 0 },
+                rank: { tier: 'UNRANKED', division: '', lp: 0, wins: 0, losses: 0 },
                 lastMatches: [],
                 generatedAt: 0,
                 stale: false
@@ -153,6 +153,12 @@ export const handler: Handler = async (event, context) => {
         let rankEntry: any = null;
         try {
             rankEntry = await riotService.getRankByPuuid(account.puuid);
+            if (rankEntry) {
+                const wins = rankEntry.wins || 0;
+                const losses = rankEntry.losses || 0;
+                const wr = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
+                console.log(`📊 Rank data for ${accountKey}: ${wins}W ${losses}L = ${wr}% WR`);
+            }
         } catch (err) {
             console.warn("⚠️ Failed to fetch rank:", err);
         }
@@ -300,7 +306,9 @@ export const handler: Handler = async (event, context) => {
             rank: {
                 tier: rankEntry?.tier || "UNRANKED",
                 division: rankEntry?.rank || "",
-                lp: rankEntry?.leaguePoints || 0
+                lp: rankEntry?.leaguePoints || 0,
+                wins: rankEntry?.wins || 0,
+                losses: rankEntry?.losses || 0
             },
             lastMatches: lastMatches,
             generatedAt: Date.now(),

@@ -2,6 +2,8 @@ export interface Rank {
     tier: string;
     division: string;
     lp: number;
+    wins: number;     // Season wins from Riot API
+    losses: number;   // Season losses from Riot API
 }
 
 export interface Match {

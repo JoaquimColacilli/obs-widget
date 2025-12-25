@@ -16,6 +16,8 @@ export interface Snapshot {
         tier: string;      // "GOLD", "PLATINUM", "UNRANKED", etc
         division: string;  // "II", "IV", "" si unranked
         lp: number;       // League Points
+        wins: number;     // Season wins from Riot API
+        losses: number;   // Season losses from Riot API
     };
     lastMatches: Array<{
         matchId: string;
