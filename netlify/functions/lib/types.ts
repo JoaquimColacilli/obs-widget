@@ -1,33 +1,38 @@
-export interface Snapshot {
-    // Per-account stats
-    accountDeaths: number;
-    accountAbs: number;
-    // Today's stats (current day only)
-    todayDeaths: number;
-    todayAbs: number;
-    // Combined totals (all 3 accounts)
-    totalDeaths: number;
-    totalAbs: number;
-    // Legacy fields (kept for backwards compatibility)
-    deathsTotal: number;
-    absTotal: number;
-    dayNumber: number;
-    rank: {
-        tier: string;      // "GOLD", "PLATINUM", "UNRANKED", etc
-        division: string;  // "II", "IV", "" si unranked
-        lp: number;       // League Points
-        wins: number;     // Season wins from Riot API
-        losses: number;   // Season losses from Riot API
+// netlify/functions/lib/types.ts
+
+export interface RiotAccount {
+    puuid: string;
+    gameName: string;
+    tagLine: string;
+}
+
+export interface RiotSummoner {
+    id: string;
+    accountId: string;
+    puuid: string;
+    profileIconId: number;
+    revisionDate: number;
+    summonerLevel: number;
+}
+
+export interface MatchParticipant {
+    puuid: string;
+    championName: string;
+    deaths: number;
+    kills: number;
+    assists: number;
+    win: boolean;
+    teamId: number;
+}
+
+export interface MatchInfo {
+    info: {
+        gameId: number;
+        queueId: number;
+        gameDuration: number; // Duration in seconds
+        gameEndTimestamp: number;
+        participants: MatchParticipant[];
     };
-    lastMatches: Array<{
-        matchId: string;
-        deaths: number;
-        result: 'win' | 'loss' | 'remake';
-        champion: string;
-        timestamp: number;
-    }>;
-    generatedAt: number;  // Timestamp de cuándo se generó
-    stale?: boolean;      // true si es data cacheada por error de Riot API
 }
 
 export interface CachedMatch {
@@ -37,49 +42,50 @@ export interface CachedMatch {
     deaths: number;
     win: boolean;
     gameEndTimestamp: number;
-    gameDuration?: number;  // Game duration in milliseconds
-    isRemake?: boolean;     // true if game was shorter than 5 minutes
+    gameDuration?: number; // Duration in milliseconds (converted from API)
+    isRemake?: boolean;
 }
 
 export interface TrackerState {
     matchCache: Record<string, CachedMatch>;
-    processedMatchIds: string[]; // Legacy, kept for compatibility
+    processedMatchIds: string[];
     lastProcessedMatchTime: number;
-    deathsTotal: number; // Legacy, kept for compatibility but recalculated now
-}
-export interface RiotAccount {
-    puuid: string;
-    gameName: string;
-    tagLine: string;
+    deathsTotal: number;
 }
 
-export interface RiotSummoner {
-    id: string; // Encrypted summoner ID
-    accountId: string;
-    puuid: string;
-    name: string;
-    profileIconId: number;
-    revisionDate: number;
-    summonerLevel: number;
+export interface Rank {
+    tier: string;
+    division: string;
+    lp: number;
+    wins: number;
+    losses: number;
 }
 
-export interface MatchInfo {
-    metadata: {
-        matchId: string;
-        participants: string[];
-    };
-    info: {
-        gameCreation: number;
-        gameDuration: number;
-        gameEndTimestamp: number;
-        queueId: number;
-        participants: Participant[];
-    }
-}
-
-export interface Participant {
-    puuid: string;
-    championName: string;
+export interface Match {
+    matchId: string;
     deaths: number;
-    win: boolean;
+    result: 'win' | 'loss' | 'remake';
+    champion: string;
+    timestamp: number;
+}
+
+export interface Snapshot {
+    // Per-account stats
+    accountDeaths: number;
+    accountAbs: number;
+    // Today's stats (current day only)
+    todayDeaths: number;
+    todayAbs: number;
+    // Combined totals (all accounts)
+    totalDeaths: number;
+    totalAbs: number;
+    // Legacy fields (kept for backwards compatibility)
+    deathsTotal: number;
+    absTotal: number;
+    // Challenge info
+    dayNumber: number;
+    rank: Rank;
+    lastMatches: Match[];
+    generatedAt: number;
+    stale?: boolean;
 }

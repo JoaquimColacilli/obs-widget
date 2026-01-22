@@ -1,15 +1,17 @@
+// src/app/models/snapshot.model.ts
+
 export interface Rank {
     tier: string;
     division: string;
     lp: number;
-    wins: number;     // Season wins from Riot API
-    losses: number;   // Season losses from Riot API
+    wins: number;
+    losses: number;
 }
 
 export interface Match {
     matchId: string;
     deaths: number;
-    result: 'win' | 'loss' | 'remake';  // remake breaks streak
+    result: 'win' | 'loss' | 'remake';
     champion: string;
     timestamp: number;
 }
@@ -24,13 +26,13 @@ export interface Snapshot {
     // Combined totals (all accounts)
     totalDeaths: number;
     totalAbs: number;
-    // Legacy fields
+    // Legacy fields (kept for backwards compatibility)
     deathsTotal: number;
     absTotal: number;
+    // Challenge info
     dayNumber: number;
     rank: Rank;
     lastMatches: Match[];
     generatedAt: number;
     stale?: boolean;
 }
-

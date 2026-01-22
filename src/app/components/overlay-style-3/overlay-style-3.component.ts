@@ -35,9 +35,9 @@ import { tap } from 'rxjs/operators';
               <div class="stats-grid">
                 <div class="glass-card">
                   <lucide-icon [img]="Skull" class="card-icon"></lucide-icon>
-                  <div class="card-label-acc">Total acc</div>
+                  <div class="card-label-acc">TOTAL</div>
                   <div class="card-value">{{ data.accountDeaths | number }}</div>
-                  <div class="card-totals">Total: {{ data.totalDeaths | number }} · <span class="card-today">Hoy: {{ data.todayDeaths | number }}</span></div>
+                  <div class="card-totals"><span class="card-today">Hoy: {{ data.todayDeaths | number }}</span></div>
                   <!-- Streak/Winrate Carousel (horizontal slide) -->
                   <div class="streak-carousel" *ngIf="deltas.showStreak && showWinrateCarousel">
                     <div class="carousel-track">
@@ -62,9 +62,9 @@ import { tap } from 'rxjs/operators';
                 </div>
                 <div class="glass-card primary">
                   <lucide-icon [img]="Dumbbell" class="card-icon primary-icon"></lucide-icon>
-                  <div class="card-label-acc">Total acc</div>
+                  <div class="card-label-acc">TOTAL</div>
                   <div class="card-value primary-value">{{ data.accountAbs | number }}</div>
-                  <div class="card-totals">Total: {{ data.totalAbs | number }} · <span class="card-today">Hoy: {{ data.todayAbs | number }}</span></div>
+                  <div class="card-totals"><span class="card-today">Hoy: {{ data.todayAbs | number }}</span></div>
                   <div class="corner-accent"></div>
                   <!-- ABS Toast -->
                   <div class="abs-toast" *ngIf="showAbsToast">+{{ absToastAmount }} ABS</div>

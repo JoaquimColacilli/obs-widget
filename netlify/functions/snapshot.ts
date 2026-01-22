@@ -1,9 +1,9 @@
+// netlify/functions/snapshot.ts
+
 import { Handler } from "@netlify/functions";
 import { RiotService } from "./lib/riot.service";
 import { BlobsService } from "./lib/blobs.service";
 import { Snapshot } from "./lib/types";
-
-const blobsService = new BlobsService();
 
 // Queue ID for Ranked Solo/Duo
 const RANKED_SOLO_QUEUE_ID = 420;
@@ -14,17 +14,20 @@ const MIN_GAME_DURATION_MS = 5 * 60 * 1000;
 
 // Account configurations
 const ACCOUNTS: Record<string, { gameName: string; tagLine: string }> = {
-    account1: { gameName: 'yunara literal', tagLine: 'abs' },
-    account2: { gameName: 'lamej0r', tagLine: 'LAS' },
-    account3: { gameName: 'waos', tagLine: 'kmu' },
+    account1: { gameName: "yunara literal", tagLine: "abs" },
+    account2: { gameName: "lamej0r", tagLine: "LAS" },
+    account3: { gameName: "waos", tagLine: "kmu" },
 };
 
 // Simple in-memory lock to prevent concurrent processing
 const processingLocks: Record<string, { isProcessing: boolean; lastStart: number }> = {};
 const PROCESSING_TIMEOUT = 120000; // 2 minutes max
 
+// Delay helper
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper to get deaths for an account (from saved snapshot)
-async function getAccountDeaths(accountKey: string): Promise<number> {
+async function getAccountDeaths(blobsService: BlobsService, accountKey: string): Promise<number> {
     const accountConfig = ACCOUNTS[accountKey];
     if (!accountConfig) return 0;
 
@@ -41,19 +44,25 @@ async function getAccountDeaths(accountKey: string): Promise<number> {
 }
 
 export const handler: Handler = async (event, context) => {
-    const START_DATE = process.env.START_DATE || '2025-12-16T00:00:00-03:00';
-    const CHAMPION_FILTER = process.env.CHAMPION_FILTER || 'Yunara';
+    // ✅ Instantiate inside handler (serverless-safe)
+    const blobsService = new BlobsService();
+
+    const START_DATE = process.env.START_DATE || "2025-12-16T00:00:00-03:00";
+    const CHAMPION_FILTER = process.env.CHAMPION_FILTER || "Yunara";
 
     // Get account from query param (default to account1)
-    const accountKey = event.queryStringParameters?.account || 'account1';
-    const accountConfig = ACCOUNTS[accountKey] || ACCOUNTS['account1'];
+    const accountKey = event.queryStringParameters?.account || "account1";
+    const accountConfig = ACCOUNTS[accountKey] || ACCOUNTS["account1"];
     const GAME_NAME = accountConfig.gameName;
     const TAG_LINE = accountConfig.tagLine;
 
-    const reset = event.queryStringParameters?.reset === 'true';
+    const reset = event.queryStringParameters?.reset === "true";
+    const forceRefresh = event.queryStringParameters?.force === "true";
     const now = Date.now();
 
-    console.log(`🚀 Snapshot handler - Account: ${accountKey} (${GAME_NAME}#${TAG_LINE}), Filter: ${CHAMPION_FILTER}${reset ? ' [RESET]' : ''}`);
+    console.log(
+        `🚀 Snapshot handler - Account: ${accountKey} (${GAME_NAME}#${TAG_LINE}), Filter: ${CHAMPION_FILTER}${reset ? " [RESET]" : ""}${forceRefresh ? " [FORCE]" : ""}`
+    );
 
     // Initialize lock for this account
     if (!processingLocks[accountKey]) {
@@ -66,68 +75,83 @@ export const handler: Handler = async (event, context) => {
         if (reset) {
             console.log(`🧹 Resetting state for ${accountKey}...`);
             lock.isProcessing = false;
-            await blobsService.saveState({
-                matchCache: {},
-                processedMatchIds: [],
-                lastProcessedMatchTime: 0,
-                deathsTotal: 0
-            }, accountKey);
-            await blobsService.saveSnapshot({
-                accountDeaths: 0,
-                accountAbs: 0,
-                todayDeaths: 0,
-                todayAbs: 0,
-                totalDeaths: 0,
-                totalAbs: 0,
-                deathsTotal: 0,
-                absTotal: 0,
-                dayNumber: 1,
-                rank: { tier: 'UNRANKED', division: '', lp: 0, wins: 0, losses: 0 },
-                lastMatches: [],
-                generatedAt: 0,
-                stale: false
-            }, accountKey);
+
+            await blobsService.saveState(
+                {
+                    matchCache: {},
+                    processedMatchIds: [],
+                    lastProcessedMatchTime: 0,
+                    deathsTotal: 0,
+                },
+                accountKey
+            );
+
+            await blobsService.saveSnapshot(
+                {
+                    accountDeaths: 0,
+                    accountAbs: 0,
+                    todayDeaths: 0,
+                    todayAbs: 0,
+                    totalDeaths: 0,
+                    totalAbs: 0,
+                    deathsTotal: 0,
+                    absTotal: 0,
+                    dayNumber: 1,
+                    rank: { tier: "UNRANKED", division: "", lp: 0, wins: 0, losses: 0 },
+                    lastMatches: [],
+                    generatedAt: 0,
+                    stale: false,
+                },
+                accountKey
+            );
+
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: `State reset for ${accountKey}` })
+                body: JSON.stringify({ message: `State reset for ${accountKey}` }),
             };
         }
 
         // Check if already processing (with timeout safety)
-        if (lock.isProcessing && (now - lock.lastStart) < PROCESSING_TIMEOUT) {
+        if (lock.isProcessing && now - lock.lastStart < PROCESSING_TIMEOUT) {
             console.log(`⏳ Account ${accountKey} is processing, returning cached snapshot...`);
             const cached = await blobsService.getLastSnapshot(accountKey);
             if (cached) {
                 let totalDeaths = cached.accountDeaths;
+
                 for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                     if (otherAccountKey !== accountKey) {
-                        const otherDeaths = await getAccountDeaths(otherAccountKey);
+                        const otherDeaths = await getAccountDeaths(blobsService, otherAccountKey);
                         totalDeaths += otherDeaths;
                     }
                 }
+
                 const totalAbs = totalDeaths * 5;
 
                 return {
                     statusCode: 200,
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ...cached, stale: true, totalDeaths, totalAbs })
+                    body: JSON.stringify({ ...cached, stale: true, totalDeaths, totalAbs }),
                 };
             }
         }
 
-        // Check cache first (30s TTL)
+        // Check cache first (30s TTL) - skip if force refresh
         const lastSnapshot = await blobsService.getLastSnapshot(accountKey);
-        if (lastSnapshot && (now - lastSnapshot.generatedAt) < 30000) {
-            console.log(`📦 Returning cached snapshot for ${accountKey} (${Math.round((now - lastSnapshot.generatedAt) / 1000)}s old)`);
+        if (!forceRefresh && lastSnapshot && now - lastSnapshot.generatedAt < 30000) {
+            console.log(
+                `📦 Returning cached snapshot for ${accountKey} (${Math.round((now - lastSnapshot.generatedAt) / 1000)}s old)`
+            );
 
             let totalDeaths = lastSnapshot.accountDeaths;
+
             for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                 if (otherAccountKey !== accountKey) {
-                    const otherDeaths = await getAccountDeaths(otherAccountKey);
+                    const otherDeaths = await getAccountDeaths(blobsService, otherAccountKey);
                     totalDeaths += otherDeaths;
                 }
             }
+
             const totalAbs = totalDeaths * 5;
 
             return {
@@ -136,8 +160,8 @@ export const handler: Handler = async (event, context) => {
                 body: JSON.stringify({
                     ...lastSnapshot,
                     totalDeaths,
-                    totalAbs
-                })
+                    totalAbs,
+                }),
             };
         }
 
@@ -145,7 +169,8 @@ export const handler: Handler = async (event, context) => {
         lock.isProcessing = true;
         lock.lastStart = now;
 
-        const riotService = new RiotService(process.env.RIOT_API_KEY || '');
+        const riotApiKey = process.env.RIOT_API_KEY || "";
+        const riotService = new RiotService(riotApiKey);
 
         // Get account & Rank
         const account = await riotService.getAccount(GAME_NAME, TAG_LINE);
@@ -173,18 +198,49 @@ export const handler: Handler = async (event, context) => {
         const matchCache = state.matchCache || {};
 
         // Identify missing matches
-        const missingMatchIds = matchIds.filter(id => !matchCache[id]);
+        const missingMatchIds = matchIds.filter((id) => !matchCache[id]);
+        const cacheCompleteness = matchIds.length > 0 ? ((matchIds.length - missingMatchIds.length) / matchIds.length) * 100 : 100;
+
+        console.log(`🔍 Cache status: ${matchIds.length - missingMatchIds.length}/${matchIds.length} (${cacheCompleteness.toFixed(1)}% complete)`);
         console.log(`🔍 ${missingMatchIds.length} new matches to fetch for ${accountKey}`);
 
-        // Fetch details for MISSING matches only
-        const BATCH_SIZE = 20;
+        // DYNAMIC BATCH SIZE based on cache completeness
+        // If cache is very incomplete (< 50%), be more aggressive
+        // If cache is mostly complete (> 90%), use conservative batch
+        let BATCH_SIZE: number;
+        let DELAY_BETWEEN_REQUESTS: number;
+
+        if (cacheCompleteness < 30) {
+            // Cache is very empty - aggressive mode
+            BATCH_SIZE = 20;
+            DELAY_BETWEEN_REQUESTS = 1200; // 1.2 seconds
+            console.log(`🚀 AGGRESSIVE MODE: Fetching up to ${BATCH_SIZE} matches (cache ${cacheCompleteness.toFixed(1)}% complete)`);
+        } else if (cacheCompleteness < 70) {
+            // Cache is partially filled - medium mode
+            BATCH_SIZE = 12;
+            DELAY_BETWEEN_REQUESTS = 1500;
+            console.log(`⚡ MEDIUM MODE: Fetching up to ${BATCH_SIZE} matches`);
+        } else {
+            // Cache is mostly complete - conservative mode
+            BATCH_SIZE = 5;
+            DELAY_BETWEEN_REQUESTS = 2000;
+            console.log(`🐢 CONSERVATIVE MODE: Fetching up to ${BATCH_SIZE} matches`);
+        }
+
+        // Fetch details for MISSING matches
         const matchesToFetch = missingMatchIds.slice(0, BATCH_SIZE);
 
         let matchesFetched = 0;
         for (const matchId of matchesToFetch) {
+            // Check remaining time (if context is available)
+            if (context.getRemainingTimeInMillis && context.getRemainingTimeInMillis() < 5000) {
+                console.warn(`⏳ Time limit approaching (${context.getRemainingTimeInMillis()}ms left), stopping batch fetch`);
+                break;
+            }
+
             try {
                 const details = await riotService.getMatchDetails(matchId);
-                const participant = details.info.participants.find(p => p.puuid === account.puuid);
+                const participant = details.info.participants.find((p: any) => p.puuid === account.puuid);
 
                 if (participant) {
                     // Calculate game duration in milliseconds
@@ -199,14 +255,22 @@ export const handler: Handler = async (event, context) => {
                         win: participant.win,
                         gameEndTimestamp: details.info.gameEndTimestamp,
                         gameDuration: gameDuration,
-                        isRemake: isRemake
+                        isRemake: isRemake,
                     };
+
                     matchesFetched++;
-                    console.log(`📥 Cached ${matchId} (${participant.championName})${isRemake ? ' [REMAKE]' : ''}`);
+                    console.log(`📥 Cached ${matchId} (${participant.championName}, ${participant.deaths} deaths)${isRemake ? " [REMAKE]" : ""}`);
                 }
+
+                // Delay between requests to avoid rate limits
+                if (matchesFetched < matchesToFetch.length) {
+                    await delay(DELAY_BETWEEN_REQUESTS);
+                }
+
             } catch (e: any) {
-                if (e?.response?.status === 429) {
-                    console.warn(`⚠️ Rate limited, stopping batch fetch`);
+                const isRateLimitError = e?.message?.includes("Rate limit exceeded");
+                if (e?.response?.status === 429 || isRateLimitError) {
+                    console.warn(`⚠️ Rate limited (${e?.message || "429"}), stopping batch fetch`);
                     break;
                 }
                 console.error(`❌ Failed to fetch match ${matchId}`, e?.message || e);
@@ -251,12 +315,12 @@ export const handler: Handler = async (event, context) => {
             const isRemake = match.isRemake || (match.gameDuration && match.gameDuration < MIN_GAME_DURATION_MS);
 
             // Include ALL matches in lastMatches - remakes get 'remake' result which breaks streak
-            let result: 'win' | 'loss' | 'remake';
+            let result: "win" | "loss" | "remake";
             if (isRemake) {
-                result = 'remake';
+                result = "remake";
                 console.log(`🔄 Match ${matchId} marked as remake (will break streak)`);
             } else {
-                result = match.win ? 'win' : 'loss';
+                result = match.win ? "win" : "loss";
             }
 
             processedMatches.push({
@@ -264,17 +328,58 @@ export const handler: Handler = async (event, context) => {
                 deaths: match.deaths,
                 result,
                 champion: match.championName,
-                timestamp: match.gameEndTimestamp
+                timestamp: match.gameEndTimestamp,
             });
         }
 
-        console.log(`🎯 Account ${accountKey}: ${validMatchesCount} ${CHAMPION_FILTER} games, ${accountDeaths} deaths, ${processedMatches.length} valid for streak`);
+        console.log(
+            `🎯 Account ${accountKey}: ${validMatchesCount} ${CHAMPION_FILTER} games, ${accountDeaths} deaths, ${processedMatches.length} valid for streak`
+        );
+
+        const stillMissing = matchIds.filter((id) => !matchCache[id]).length;
+
+        // 🔒 Safety: if we're missing lots of matches and we already have a non-zero snapshot,
+        // don't overwrite it with a partial/zero snapshot (prevents "all 0" after deploy).
+        // BUT: Allow overwrite if the new value is HIGHER (we recovered more data)
+        if (lastSnapshot && stillMissing > 0 && accountDeaths < lastSnapshot.accountDeaths) {
+            console.warn(
+                `⚠️ Partial cache for ${accountKey} (stillMissing=${stillMissing}, new=${accountDeaths}, old=${lastSnapshot.accountDeaths}). Keeping higher value.`
+            );
+
+            let totalDeaths = lastSnapshot.accountDeaths;
+            for (const otherAccountKey of Object.keys(ACCOUNTS)) {
+                if (otherAccountKey !== accountKey) {
+                    const otherDeaths = await getAccountDeaths(blobsService, otherAccountKey);
+                    totalDeaths += otherDeaths;
+                }
+            }
+            const totalAbs = totalDeaths * 5;
+
+            lock.isProcessing = false;
+
+            return {
+                statusCode: 200,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    ...lastSnapshot, 
+                    stale: true, 
+                    totalDeaths, 
+                    totalAbs,
+                    _debug: {
+                        reason: "Kept higher cached value",
+                        newValue: accountDeaths,
+                        cachedValue: lastSnapshot.accountDeaths,
+                        stillMissing
+                    }
+                }),
+            };
+        }
 
         // Calculate COMBINED total from all 3 accounts
         let totalDeaths = accountDeaths;
         for (const otherAccountKey of Object.keys(ACCOUNTS)) {
             if (otherAccountKey !== accountKey) {
-                const otherDeaths = await getAccountDeaths(otherAccountKey);
+                const otherDeaths = await getAccountDeaths(blobsService, otherAccountKey);
                 totalDeaths += otherDeaths;
                 console.log(`📊 ${otherAccountKey} contributed ${otherDeaths} deaths to total`);
             }
@@ -284,12 +389,8 @@ export const handler: Handler = async (event, context) => {
         const totalAbs = totalDeaths * 5;
         const todayAbs = todayDeaths * 5;
 
-        const stillMissing = matchIds.filter(id => !matchCache[id]).length;
-
         // Sort by timestamp descending and take last 10 for better streak accuracy
-        const lastMatches = processedMatches
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 10);
+        const lastMatches = processedMatches.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
 
         const dayNumber = Math.ceil((now - new Date(START_DATE).getTime()) / (1000 * 60 * 60 * 24));
 
@@ -308,11 +409,11 @@ export const handler: Handler = async (event, context) => {
                 division: rankEntry?.rank || "",
                 lp: rankEntry?.leaguePoints || 0,
                 wins: rankEntry?.wins || 0,
-                losses: rankEntry?.losses || 0
+                losses: rankEntry?.losses || 0,
             },
             lastMatches: lastMatches,
             generatedAt: Date.now(),
-            stale: stillMissing > 0
+            stale: stillMissing > 0,
         };
 
         await blobsService.saveSnapshot(snapshot, accountKey);
@@ -321,13 +422,15 @@ export const handler: Handler = async (event, context) => {
         lock.isProcessing = false;
 
         console.log(`✅ Snapshot generated for ${accountKey}: ${accountDeaths}/${totalDeaths} deaths, ${accountAbs}/${totalAbs} abs`);
+        if (stillMissing > 0) {
+            console.log(`⚠️ Still missing ${stillMissing} matches - will fetch on next request`);
+        }
 
         return {
             statusCode: 200,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(snapshot)
+            body: JSON.stringify(snapshot),
         };
-
     } catch (error: any) {
         console.error(`❌ Snapshot error for ${accountKey}:`, error?.message || error);
         lock.isProcessing = false;
@@ -335,26 +438,30 @@ export const handler: Handler = async (event, context) => {
         const fallback = await blobsService.getLastSnapshot(accountKey);
         if (fallback) {
             let totalDeaths = fallback.accountDeaths;
+
             for (const otherAccountKey of Object.keys(ACCOUNTS)) {
                 if (otherAccountKey !== accountKey) {
                     try {
-                        const otherDeaths = await getAccountDeaths(otherAccountKey);
+                        const otherDeaths = await getAccountDeaths(blobsService, otherAccountKey);
                         totalDeaths += otherDeaths;
-                    } catch { /* ignore errors in fallback */ }
+                    } catch {
+                        /* ignore errors in fallback */
+                    }
                 }
             }
+
             const totalAbs = totalDeaths * 5;
 
             return {
                 statusCode: 200,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...fallback, stale: true, totalDeaths, totalAbs })
+                body: JSON.stringify({ ...fallback, stale: true, totalDeaths, totalAbs }),
             };
         }
 
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Failed to generate snapshot" })
+            body: JSON.stringify({ error: "Failed to generate snapshot" }),
         };
     }
 };

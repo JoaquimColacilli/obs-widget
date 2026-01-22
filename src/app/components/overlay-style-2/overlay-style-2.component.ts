@@ -32,9 +32,9 @@ import { tap } from 'rxjs/operators';
               <span class="stat-label">Muertes</span>
             </div>
             <div class="stat-right">
-              <span class="stat-label-acc">Total acc</span>
+              <span class="stat-label-acc">TOTAL:</span>
               <span class="stat-value">{{ data.accountDeaths | number }}</span>
-              <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
+              <span class="stat-totals"><span class="stat-today">HOY: {{ data.todayDeaths | number }}</span></span>
               <!-- Streak/Winrate Carousel (horizontal slide) -->
               <div class="streak-carousel" *ngIf="deltas.showStreak && showWinrateCarousel">
                 <div class="carousel-track">
@@ -64,9 +64,9 @@ import { tap } from 'rxjs/operators';
               <span class="stat-label">Abdominales</span>
             </div>
             <div class="stat-right stat-right-relative">
-              <span class="stat-label-acc">Total acc</span>
+              <span class="stat-label-acc">TOTAL:</span>
               <span class="stat-value featured-value">{{ data.accountAbs | number }}</span>
-              <span class="stat-totals">Total: {{ data.totalAbs | number }} · <span class="stat-today">Hoy: {{ data.todayAbs | number }}</span></span>
+              <span class="stat-totals"><span class="stat-today">HOY: {{ data.todayAbs | number }}</span></span>
               <!-- ABS Toast -->
               <div class="abs-toast" *ngIf="showAbsToast">+{{ absToastAmount }} ABS</div>
             </div>

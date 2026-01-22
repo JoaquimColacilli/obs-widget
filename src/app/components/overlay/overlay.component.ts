@@ -29,9 +29,9 @@ import { tap } from 'rxjs/operators';
               <div class="stat-item">
                 <lucide-icon [img]="Skull" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content">
-                  <span class="stat-label-acc">Total acc</span>
+                  <span class="stat-label-acc">TOTAL:</span>
                   <span class="stat-value text-shadow">{{ data.accountDeaths | number }}</span>
-                  <span class="stat-totals">Total: {{ data.totalDeaths | number }} · <span class="stat-today">Hoy: {{ data.todayDeaths | number }}</span></span>
+                  <span class="stat-totals"><span class="stat-today">HOY: {{ data.todayDeaths | number }}</span></span>
                   <!-- Streak/Winrate Carousel (horizontal slide) -->
                   <div class="streak-carousel" *ngIf="deltas.showStreak && showWinrateCarousel">
                     <div class="carousel-track">
@@ -60,9 +60,9 @@ import { tap } from 'rxjs/operators';
               <div class="stat-item highlighted">
                 <lucide-icon [img]="Dumbbell" class="stat-icon icon-shadow"></lucide-icon>
                 <div class="stat-content stat-content-relative">
-                  <span class="stat-label-acc">Total acc</span>
+                  <span class="stat-label-acc">TOTAL:</span>
                   <span class="stat-value text-shadow">{{ data.accountAbs | number }}</span>
-                  <span class="stat-totals">Total: {{ data.totalAbs | number }} · <span class="stat-today">Hoy: {{ data.todayAbs | number }}</span></span>
+                  <span class="stat-totals"><span class="stat-today">HOY: {{ data.todayAbs | number }}</span></span>
                   <!-- ABS Toast -->
                   <div class="abs-toast" *ngIf="showAbsToast">+{{ absToastAmount }} ABS</div>
                 </div>
